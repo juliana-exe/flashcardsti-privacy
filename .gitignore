@@ -1,0 +1,20 @@
+# Dependências
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Build nativo
+android/
+ios/
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
+
+# Ambiente
+.env
+.env.local
