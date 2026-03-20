@@ -8,14 +8,20 @@
 //    Pronto! Filtros são gerados automaticamente.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import redes      from './redes';
-import seguranca  from './seguranca';
-import bancoDados from './bancoDados';
+import redes        from './redes';
+import seguranca    from './seguranca';
+import bancoDados   from './bancoDados';
+import so           from './so';
+import engSoftware  from './engSoftware';
+import linguagens   from './linguagens';
 
 export const CARDS = [
   ...redes,
   ...seguranca,
   ...bancoDados,
+  ...so,
+  ...engSoftware,
+  ...linguagens,
 ];
 
 // Filtros gerados automaticamente a partir dos dados — nunca edite manualmente

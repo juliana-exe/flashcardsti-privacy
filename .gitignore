@@ -18,3 +18,16 @@ Thumbs.db
 # Ambiente
 .env
 .env.local
+
+# EAS Build
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+google-service-account.json
+
+# Arquivos sensíveis
+credentials.json
+service-account-*.json

@@ -10,12 +10,13 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   StatusBar,
   SafeAreaView,
   Modal,
   TouchableOpacity,
   Platform,
+  ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 
 import Animated, {
@@ -52,10 +53,17 @@ import { CARDS, BANCAS, MATERIAS } from './data/index';
 // ─────────────────────────────────────────────────────────────────────────────
 //  DIMENSÕES & TEMA
 // ─────────────────────────────────────────────────────────────────────────────
-const { width: SW } = Dimensions.get('window');
-const CARD_W = SW - 48;
-const CARD_H = CARD_W * 1.5;
-const SWIPE_THRESHOLD = SW * 0.28;
+// Dimensões responsivas recalculadas a cada mudança de orientação / tamanho
+function useLayout() {
+  const { width, height } = useWindowDimensions();
+  const cardW = width - 48;
+  // Limita a altura para caber em telas pequenas com header + stats + actions abaixo
+  const cardH = Math.min(cardW * 1.55, height * 0.52);
+  const swipeThreshold = width * 0.28;
+  // Escala tipográfica: base 375 px (iPhone padrão). Clamp entre 0.82 e 1.12.
+  const fontScale = Math.min(Math.max(width / 375, 0.82), 1.12);
+  return { width, height, cardW, cardH, swipeThreshold, fontScale };
+}
 
 const C = {
   bg:           '#0D0D0D',
@@ -87,7 +95,8 @@ const DIFF_COLOR = { 'Fácil': C.neon, 'Médio': C.gold, 'Difícil': C.red };
 // ─────────────────────────────────────────────────────────────────────────────
 //  COMPONENTE: FlashCard (flip + swipe)
 // ─────────────────────────────────────────────────────────────────────────────
-function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total }) {
+function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total, layout }) {
+  const { width: SW, cardW: CARD_W, cardH: CARD_H, swipeThreshold: SWIPE_THRESHOLD, fontScale } = layout;
   const tx   = useSharedValue(0);
   const ty   = useSharedValue(0);
   const rot  = useSharedValue(0);
@@ -172,7 +181,7 @@ function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total }) {
 
   return (
     <GestureDetector gesture={composed}>
-      <Animated.View style={[styles.cardWrapper, cardWrapStyle]}>
+      <Animated.View style={[styles.cardWrapper, { width: CARD_W, height: CARD_H }, cardWrapStyle]}>
 
         {/* ── Indicador: Já Sei ─────────────────────────────────────────── */}
         <Animated.View style={[styles.swipeIndicatorRight, swipeRightOpacity]}>
@@ -187,7 +196,7 @@ function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total }) {
         </Animated.View>
 
         {/* ═══ FRENTE ═══════════════════════════════════════════════════ */}
-        <Animated.View style={[styles.card, { backgroundColor: C.cardFront, borderColor: C.neonBorder }, frontStyle]}>
+        <Animated.View style={[styles.card, { width: CARD_W, height: CARD_H, backgroundColor: C.cardFront, borderColor: C.neonBorder }, frontStyle]}>
           {/* Tags */}
           <View style={styles.cardTopRow}>
             <View style={[styles.badge, { borderColor: C.neonBorder }]}>
@@ -204,7 +213,7 @@ function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total }) {
               <BookOpen color={C.neon} size={30} strokeWidth={1.5} />
             </View>
             <Text style={styles.cardFaceLabel}>TERMO</Text>
-            <Text style={styles.cardTermText}>{card.frente}</Text>
+            <Text style={[styles.cardTermText, { fontSize: Math.round(24 * fontScale) }]}>{card.frente}</Text>
             <Text style={styles.cardMateriaText}>{card.materia}</Text>
           </View>
 
@@ -216,7 +225,7 @@ function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total }) {
         </Animated.View>
 
         {/* ═══ VERSO ════════════════════════════════════════════════════ */}
-        <Animated.View style={[styles.card, { backgroundColor: C.cardBack, borderColor: C.purpleBorder }, backStyle]}>
+        <Animated.View style={[styles.card, { width: CARD_W, height: CARD_H, backgroundColor: C.cardBack, borderColor: C.purpleBorder }, backStyle]}>
           {/* Tags */}
           <View style={styles.cardTopRow}>
             <View style={[styles.badge, { borderColor: C.purpleBorder }]}>
@@ -233,7 +242,7 @@ function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total }) {
               <Brain color={C.purpleLight} size={30} strokeWidth={1.5} />
             </View>
             <Text style={[styles.cardFaceLabel, { color: C.purpleLight }]}>DEFINIÇÃO</Text>
-            <Text style={styles.cardBodyText}>{card.verso}</Text>
+            <Text style={[styles.cardBodyText, { fontSize: Math.round(14 * fontScale), lineHeight: Math.round(22 * fontScale) }]}>{card.verso}</Text>
           </View>
 
           {/* Rodapé */}
@@ -265,33 +274,35 @@ function FilterModal({ visible, onClose, banca, materia, onBanca, onMateria }) {
             </TouchableOpacity>
           </View>
 
-          {/* Banca */}
-          <Text style={styles.filterGroupLabel}>BANCA</Text>
-          <View style={styles.chipsRow}>
-            {BANCAS.map((b) => (
-              <TouchableOpacity
-                key={b}
-                style={[styles.chip, banca === b && styles.chipActive]}
-                onPress={() => onBanca(b)}
-              >
-                <Text style={[styles.chipText, banca === b && styles.chipTextActive]}>{b}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <ScrollView showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
+            {/* Banca */}
+            <Text style={styles.filterGroupLabel}>BANCA</Text>
+            <View style={styles.chipsRow}>
+              {BANCAS.map((b) => (
+                <TouchableOpacity
+                  key={b}
+                  style={[styles.chip, banca === b && styles.chipActive]}
+                  onPress={() => onBanca(b)}
+                >
+                  <Text style={[styles.chipText, banca === b && styles.chipTextActive]}>{b}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-          {/* Matéria */}
-          <Text style={[styles.filterGroupLabel, { marginTop: 22 }]}>MATÉRIA</Text>
-          <View style={styles.chipsRow}>
-            {MATERIAS.map((m) => (
-              <TouchableOpacity
-                key={m}
-                style={[styles.chip, materia === m && styles.chipActive]}
-                onPress={() => onMateria(m)}
-              >
-                <Text style={[styles.chipText, materia === m && styles.chipTextActive]}>{m}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            {/* Matéria */}
+            <Text style={[styles.filterGroupLabel, { marginTop: 22 }]}>MATÉRIA</Text>
+            <View style={[styles.chipsRow, { marginBottom: 8 }]}>
+              {MATERIAS.map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.chip, materia === m && styles.chipActive]}
+                  onPress={() => onMateria(m)}
+                >
+                  <Text style={[styles.chipText, materia === m && styles.chipTextActive]}>{m}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
 
           <TouchableOpacity style={styles.applyBtn} onPress={onClose}>
             <Text style={styles.applyBtnText}>Aplicar Filtros</Text>
@@ -362,6 +373,7 @@ function EmptyState({ message, onReset }) {
 const STORAGE_KEY = '@flashcards_ti:progress';
 
 function App() {
+  const layout = useLayout();
   const [bancaFilter,   setBancaFilter]   = useState('Todas');
   const [materiaFilter, setMateriaFilter] = useState('Todas');
   const [showFilters,   setShowFilters]   = useState(false);
@@ -527,7 +539,7 @@ function App() {
             <>
               {/* Card do fundo (próximo) */}
               {nextCard && (
-                <View style={styles.shadowCard} pointerEvents="none" />
+                <View style={[styles.shadowCard, { width: layout.cardW, height: layout.cardH }]} pointerEvents="none" />
               )}
               {/* Card ativo */}
               <FlashCard
@@ -537,6 +549,7 @@ function App() {
                 onSwipeLeft={handleSwipeLeft}
                 index={cardIndex}
                 total={filteredCards.length}
+                layout={layout}
               />
             </>
           )}
@@ -691,8 +704,6 @@ const styles = StyleSheet.create({
 
   shadowCard: {
     position: 'absolute',
-    width: CARD_W,
-    height: CARD_H,
     borderRadius: 24,
     backgroundColor: C.cardFront,
     borderWidth: 1.5,
@@ -701,11 +712,10 @@ const styles = StyleSheet.create({
   },
 
   // ── FLASH CARD ────────────────────────────────────────────────────────────
-  cardWrapper: { width: CARD_W, height: CARD_H },
+  // width/height passados inline via prop layout (responsivo)
+  cardWrapper: {},
 
   card: {
-    width: CARD_W,
-    height: CARD_H,
     borderRadius: 24,
     borderWidth: 1.5,
     padding: 20,
@@ -812,6 +822,7 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: Platform.OS === 'ios' ? 42 : 28,
     borderTopWidth: 1, borderColor: C.border,
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between',
