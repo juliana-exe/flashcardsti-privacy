@@ -2,7 +2,7 @@
   "expo": {
     "name": "FlashCards TI",
     "slug": "flashcards-ti",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "icon": "./assets/icon.png",
@@ -23,6 +23,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "com.dev.flashcardsti",
+      "versionCode": 12,
       "permissions": [],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
