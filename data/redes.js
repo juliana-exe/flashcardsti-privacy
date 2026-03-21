@@ -21,7 +21,7 @@ export default [
 
   { id:'redes_005', banca:'Cebraspe', materia:'Redes de Computadores', dificuldade:'Difícil',
     frente:'IPv6 — Principais Características',
-    verso:'Endereços de 128 bits (vs 32 bits do IPv4), notação hexadecimal separada por ":". Sem broadcast (usa multicast e anycast). Cabeçalho simplificado. IPSec nativo obrigatório na especificação original. Auto-configuração stateless via SLAAC. Espaço de ~3,4×10³⁸ endereços.' },
+    verso:'Endereços de 128 bits (vs 32 bits do IPv4), notação hexadecimal separada por ":". Sem broadcast (usa multicast e anycast). Cabeçalho simplificado. IPSec nativo previsto na especificação original, mas opcional na prática (RFC 6434 removeu a obrigatoriedade). Auto-configuração stateless via SLAAC. Espaço de ~3,4×10³⁸ endereços.' },
 
   { id:'redes_006', banca:'FGV', materia:'Redes de Computadores', dificuldade:'Fácil',
     frente:'Protocolo UDP',
@@ -61,7 +61,7 @@ export default [
 
   { id:'redes_015', banca:'FGV', materia:'Redes de Computadores', dificuldade:'Médio',
     frente:'Sub-redes — VLSM e CIDR',
-    verso:'VLSM (Variable Length Subnet Masking) permite máscaras de tamanhos diferentes em sub-redes de um mesmo bloco, otimizando uso de IPs. CIDR (Classless Inter-Domain Routing) usa notação prefixo/comprimento (ex.: 192.168.1.0/24) eliminando classes fixas A/B/C. Ambos são essenciais para conursos.' },
+    verso:'VLSM (Variable Length Subnet Masking) permite máscaras de tamanhos diferentes em sub-redes de um mesmo bloco, otimizando uso de IPs. CIDR (Classless Inter-Domain Routing) usa notação prefixo/comprimento (ex.: 192.168.1.0/24) eliminando classes fixas A/B/C. Ambos são essenciais para concursos.' },
 
   { id:'redes_016', banca:'FCC', materia:'Redes de Computadores', dificuldade:'Difícil',
     frente:'STP — Spanning Tree Protocol',
@@ -145,7 +145,7 @@ export default [
 
   { id:'redes_036', banca:'FGV', materia:'Redes de Computadores', dificuldade:'Médio',
     frente:'LDAP — Lightweight Directory Access Protocol',
-    verso:'Protocolo para acesso e gerenciamento de serviços de diretório (ex.: Active Directory). Porta 389 (TCP/UDP); LDAPS (com TLS): porta 636. Estrutura hierárquica: DC (Domain Component), OU (Organizational Unit), CN (Common Name). Base para autenticação centralizada em redes corporativas.' },
+    verso:'Protocolo para acesso e gerenciamento de serviços de diretório (ex.: Active Directory). Porta 389 (TCP); LDAPS (com TLS): porta 636 (TCP). Estrutura hierárquica: DC (Domain Component), OU (Organizational Unit), CN (Common Name). Base para autenticação centralizada em redes corporativas.' },
 
   { id:'redes_037', banca:'FCC', materia:'Redes de Computadores', dificuldade:'Médio',
     frente:'Proxy vs Proxy Reverso',

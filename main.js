@@ -11,19 +11,22 @@ import {
   Text,
   StyleSheet,
   StatusBar,
-  SafeAreaView,
   Modal,
   TouchableOpacity,
   Platform,
   ScrollView,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
+
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
+  withRepeat,
   interpolate,
   runOnJS,
   Extrapolation,
@@ -44,10 +47,13 @@ import {
   Brain,
   Layers,
   X,
+  Shuffle,
+  Flame,
 } from 'lucide-react-native';
 
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as NavigationBar from 'expo-navigation-bar';
 import { CARDS, BANCAS, MATERIAS } from './data/index';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -56,9 +62,12 @@ import { CARDS, BANCAS, MATERIAS } from './data/index';
 // Dimensões responsivas recalculadas a cada mudança de orientação / tamanho
 function useLayout() {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const cardW = width - 48;
-  // Limita a altura para caber em telas pequenas com header + stats + actions abaixo
-  const cardH = Math.min(cardW * 1.55, height * 0.52);
+  // Desconta insets reais do dispositivo + chrome: header(60) + filterBar(56) + stats(56) + progress(60) + actionBar(110) + margem(40)
+  const safeHeight = height - insets.top - insets.bottom;
+  const maxCardH = safeHeight - 382;
+  const cardH = Math.min(cardW * 1.55, safeHeight * 0.52, maxCardH);
   const swipeThreshold = width * 0.28;
   // Escala tipográfica: base 375 px (iPhone padrão). Clamp entre 0.82 e 1.12.
   const fontScale = Math.min(Math.max(width / 375, 0.82), 1.12);
@@ -236,13 +245,20 @@ function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total, layout }) {
             </View>
           </View>
 
-          {/* Conteúdo central */}
+          {/* Conteúdo central com scroll para textos longos */}
           <View style={styles.cardCenter}>
             <View style={[styles.iconCircle, { backgroundColor: C.purpleDim }]}>
               <Brain color={C.purpleLight} size={30} strokeWidth={1.5} />
             </View>
             <Text style={[styles.cardFaceLabel, { color: C.purpleLight }]}>DEFINIÇÃO</Text>
-            <Text style={[styles.cardBodyText, { fontSize: Math.round(14 * fontScale), lineHeight: Math.round(22 * fontScale) }]}>{card.verso}</Text>
+            <ScrollView
+              style={{ width: '100%' }}
+              contentContainerStyle={{ paddingHorizontal: 4, paddingBottom: 4 }}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              <Text style={[styles.cardBodyText, { fontSize: Math.round(14 * fontScale), lineHeight: Math.round(22 * fontScale) }]}>{card.verso}</Text>
+            </ScrollView>
           </View>
 
           {/* Rodapé */}
@@ -260,7 +276,7 @@ function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total, layout }) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  COMPONENTE: Modal de Filtros
 // ─────────────────────────────────────────────────────────────────────────────
-function FilterModal({ visible, onClose, banca, materia, onBanca, onMateria }) {
+function FilterModal({ visible, onClose, bancas, materias, onToggleBanca, onToggleMateria, onClear }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
@@ -269,6 +285,9 @@ function FilterModal({ visible, onClose, banca, materia, onBanca, onMateria }) {
           {/* Cabeçalho */}
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Filtros</Text>
+            <TouchableOpacity onPress={onClear} style={styles.modalClearBtn}>
+              <Text style={styles.modalClearText}>Limpar</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
               <X color={C.textDim} size={20} />
             </TouchableOpacity>
@@ -278,29 +297,35 @@ function FilterModal({ visible, onClose, banca, materia, onBanca, onMateria }) {
             {/* Banca */}
             <Text style={styles.filterGroupLabel}>BANCA</Text>
             <View style={styles.chipsRow}>
-              {BANCAS.map((b) => (
-                <TouchableOpacity
-                  key={b}
-                  style={[styles.chip, banca === b && styles.chipActive]}
-                  onPress={() => onBanca(b)}
-                >
-                  <Text style={[styles.chipText, banca === b && styles.chipTextActive]}>{b}</Text>
-                </TouchableOpacity>
-              ))}
+              {BANCAS.filter((b) => b !== 'Todas').map((b) => {
+                const active = bancas.has(b);
+                return (
+                  <TouchableOpacity
+                    key={b}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => onToggleBanca(b)}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{b}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* Matéria */}
             <Text style={[styles.filterGroupLabel, { marginTop: 22 }]}>MATÉRIA</Text>
             <View style={[styles.chipsRow, { marginBottom: 8 }]}>
-              {MATERIAS.map((m) => (
-                <TouchableOpacity
-                  key={m}
-                  style={[styles.chip, materia === m && styles.chipActive]}
-                  onPress={() => onMateria(m)}
-                >
-                  <Text style={[styles.chipText, materia === m && styles.chipTextActive]}>{m}</Text>
-                </TouchableOpacity>
-              ))}
+              {MATERIAS.filter((m) => m !== 'Todas').map((m) => {
+                const active = materias.has(m);
+                return (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => onToggleMateria(m)}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{m}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </ScrollView>
 
@@ -316,7 +341,7 @@ function FilterModal({ visible, onClose, banca, materia, onBanca, onMateria }) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  COMPONENTE: DeckProgressBar
 // ─────────────────────────────────────────────────────────────────────────────
-function DeckProgressBar({ total, remaining }) {
+function DeckProgressBar({ total, remaining, fontScale }) {
   const done      = total - remaining;
   const targetPct = total > 0 ? done / total : 0;
   const animPct   = useSharedValue(0);
@@ -333,7 +358,7 @@ function DeckProgressBar({ total, remaining }) {
     <View style={styles.dpWrap}>
       <View style={styles.dpTopRow}>
         <View>
-          <Text style={styles.dpRemNum}>{remaining}</Text>
+          <Text style={[styles.dpRemNum, { fontSize: Math.round(30 * fontScale) }]}>{remaining}</Text>
           <Text style={styles.dpRemLabel}>cards restantes</Text>
         </View>
         <View style={styles.dpRight}>
@@ -354,15 +379,52 @@ function DeckProgressBar({ total, remaining }) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  COMPONENTE: Estado vazio / Deck concluído
 // ─────────────────────────────────────────────────────────────────────────────
-function EmptyState({ message, onReset }) {
+function EmptyState({ message, onReset, resetLabel = 'Reiniciar Deck' }) {
   return (
     <View style={styles.emptyState}>
       <Layers color={C.neon} size={64} strokeWidth={1} />
       <Text style={styles.emptyText}>{message}</Text>
       <TouchableOpacity style={styles.resetBtn} onPress={onReset}>
         <RotateCcw color={C.bg} size={17} />
-        <Text style={styles.resetBtnText}>Reiniciar Deck</Text>
+        <Text style={styles.resetBtnText}>{resetLabel}</Text>
       </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  COMPONENTE: ActionBar — botões que somem/aparecem
+// ─────────────────────────────────────────────────────────────────────────────
+function ActionBar({ buttonsAnim, buttonsVisible, onToggle, onRevisar, onJaSei }) {
+  const insets = useSafeAreaInsets();
+  const slideStyle = useAnimatedStyle(() => ({
+    opacity: buttonsAnim.value,
+    maxHeight: interpolate(buttonsAnim.value, [0, 1], [0, 120], Extrapolation.CLAMP),
+    overflow: 'hidden',
+  }));
+
+  return (
+    <View style={[styles.actionBarWrap, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      {/* Handle: sempre visível, toggle ao tocar */}
+      <TouchableOpacity style={styles.actionHandle} onPress={onToggle} activeOpacity={0.6}>
+        <View style={styles.actionHandlePill} />
+        <Text style={styles.actionHandleHint}>
+          {buttonsVisible ? 'toque para ocultar botões' : '← deslize o card →  ou toque aqui'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Botões animados */}
+      <Animated.View style={[styles.actions, slideStyle]} pointerEvents={buttonsVisible ? 'auto' : 'none'}>
+        <TouchableOpacity style={styles.actionBtnSecondary} onPress={onRevisar} activeOpacity={0.65}>
+          <XCircle color={C.red} size={21} />
+          <Text style={[styles.actionLbl, { color: C.red }]}>Revisar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionBtnPrimary} onPress={onJaSei} activeOpacity={0.75}>
+          <CheckCircle color={C.neon} size={21} />
+          <Text style={[styles.actionLbl, { color: C.neon }]}>Já Sei</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }
@@ -370,21 +432,56 @@ function EmptyState({ message, onReset }) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  APP PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
-const STORAGE_KEY = '@flashcards_ti:progress';
+const STORAGE_KEY         = '@flashcards_ti:progress';
+const STORAGE_FILTERS_KEY = '@flashcards_ti:filters';
+
+// ── Utilitário: Fisher-Yates shuffle ─────────────────────────────────────────
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 function App() {
   const layout = useLayout();
-  const [bancaFilter,   setBancaFilter]   = useState('Todas');
-  const [materiaFilter, setMateriaFilter] = useState('Todas');
-  const [showFilters,   setShowFilters]   = useState(false);
+  const [bancaFilter,    setBancaFilter]   = useState(new Set());
+  const [materiaFilter,  setMateriaFilter] = useState(new Set());
+  const [reviewOnly,     setReviewOnly]    = useState(false);
+  const [showFilters,    setShowFilters]   = useState(false);
+  const [buttonsVisible, setButtonsVisible] = useState(true);
+  const [shuffled,       setShuffled]      = useState(false);
+  const [shuffleOrder,   setShuffleOrder]  = useState([]);
+  const [reviewSnapshot,    setReviewSnapshot]    = useState([]);
+  const [reviewSessionDone, setReviewSessionDone] = useState(new Set());
+  const [streak,            setStreak]            = useState(0);
+  const buttonsAnim = useSharedValue(1);
   // progress: { [cardId]: 'know' | 'review' }
-  const [progress,      setProgress]      = useState({});
-  const [loaded,        setLoaded]        = useState(false);
+  const [progress,       setProgress]      = useState({});
+  const [loaded,         setLoaded]        = useState(false);
 
-  // ── Carrega progresso salvo ao abrir o app ────────────────────────────────
+  // ── Modo imersivo: esconde barra de navegação do Android ──────────────────
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => { if (raw) setProgress(JSON.parse(raw)); })
+    NavigationBar.setVisibilityAsync('hidden');
+    NavigationBar.setBehaviorAsync('overlay-swipe');
+  }, []);
+
+  // ── Carrega progresso e filtros salvos ao abrir o app ───────────────────
+  useEffect(() => {
+    Promise.all([
+      AsyncStorage.getItem(STORAGE_KEY),
+      AsyncStorage.getItem(STORAGE_FILTERS_KEY),
+    ])
+      .then(([rawProgress, rawFilters]) => {
+        if (rawProgress) setProgress(JSON.parse(rawProgress));
+        if (rawFilters) {
+          const { bancas, materias } = JSON.parse(rawFilters);
+          if (bancas)   setBancaFilter(new Set(bancas));
+          if (materias) setMateriaFilter(new Set(materias));
+        }
+      })
       .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
@@ -395,19 +492,49 @@ function App() {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress)).catch(() => {});
   }, [progress, loaded]);
 
-  // Cards filtrados
+  // ── Persiste filtros toda vez que mudam ───────────────────────────────────
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem(STORAGE_FILTERS_KEY, JSON.stringify({
+      bancas: [...bancaFilter],
+      materias: [...materiaFilter],
+    })).catch(() => {});
+  }, [bancaFilter, materiaFilter, loaded]);
+
+  // Cards filtrados — apenas banca e matéria (estável, não depende de progress)
   const filteredCards = useMemo(() =>
     CARDS.filter((c) =>
-      (bancaFilter   === 'Todas' || c.banca   === bancaFilter) &&
-      (materiaFilter === 'Todas' || c.materia === materiaFilter)
+      (bancaFilter.size   === 0 || bancaFilter.has(c.banca)) &&
+      (materiaFilter.size === 0 || materiaFilter.has(c.materia))
     ),
     [bancaFilter, materiaFilter]
   );
 
-  // Cards ainda não avaliados (sem status no progresso)
+  // No modo Só Revisar usa o snapshot capturado ao entrar (lista fixa);
+  // caso contrário usa filteredCards normalmente.
+  const deckBase = useMemo(() => {
+    if (!reviewOnly) return filteredCards;
+    return reviewSnapshot
+      .map((id) => filteredCards.find((c) => c.id === id))
+      .filter(Boolean);
+  }, [reviewOnly, reviewSnapshot, filteredCards]);
+
+  // Ordem embaralhada — recalculada quando deckBase muda ou shuffle ativa
+  const orderedCards = useMemo(() => {
+    if (!shuffled) return deckBase;
+    if (shuffleOrder.length === deckBase.length &&
+        shuffleOrder.every((id) => deckBase.some((c) => c.id === id))) {
+      return shuffleOrder.map((id) => deckBase.find((c) => c.id === id)).filter(Boolean);
+    }
+    return deckBase;
+  }, [shuffled, shuffleOrder, deckBase]);
+
+  // Cards ainda não avaliados — no modo Só Revisar, mostra os marcados como 'review' e ainda não vistos nesta sessão
   const remaining = useMemo(() =>
-    filteredCards.filter((c) => !progress[c.id]),
-    [filteredCards, progress]
+    reviewOnly
+      ? orderedCards.filter((c) => progress[c.id] === 'review' && !reviewSessionDone.has(c.id))
+      : orderedCards.filter((c) => !progress[c.id]),
+    [orderedCards, progress, reviewOnly, reviewSessionDone]
   );
 
   // Stats derivadas do progresso salvo (apenas cards do filtro atual)
@@ -429,41 +556,115 @@ function App() {
   const handleSwipeRight = useCallback((id) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setProgress((prev) => ({ ...prev, [id]: 'know' }));
+    setStreak((s) => s + 1);
   }, []);
 
   const handleSwipeLeft = useCallback((id) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setProgress((prev) => ({ ...prev, [id]: 'review' }));
-  }, []);
+    setStreak(0);
+    if (reviewOnly) {
+      setReviewSessionDone((prev) => { const n = new Set(prev); n.add(id); return n; });
+    }
+  }, [reviewOnly]);
 
   const handleReset = useCallback(() => {
-    // Remove apenas os cards do filtro atual do progresso
     setProgress((prev) => {
       const next = { ...prev };
       filteredCards.forEach((c) => delete next[c.id]);
       return next;
     });
-  }, [filteredCards]);
+    setStreak(0);
+    // Sai do modo Só Revisar ao reiniciar para não ficar preso na tela de conclusão
+    if (reviewOnly) {
+      setReviewOnly(false);
+      setReviewSnapshot([]);
+      setReviewSessionDone(new Set());
+    }
+  }, [filteredCards, reviewOnly]);
 
-  const handleBanca = useCallback((b) => {
-    setBancaFilter(b);
+  const handleResetConfirm = useCallback(() => {
+    const count = filteredCards.filter((c) => progress[c.id]).length;
+    if (count === 0) { handleReset(); return; }
+    Alert.alert(
+      'Reiniciar deck?',
+      `Isso vai apagar o progresso de ${count} card${count > 1 ? 's' : ''} ${filteredCards.length < CARDS.length ? 'neste filtro' : 'do deck inteiro'}. Essa ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Reiniciar', style: 'destructive', onPress: handleReset },
+      ],
+      { cancelable: true }
+    );
+  }, [filteredCards, progress, handleReset]);
+
+  const handleToggleBanca = useCallback((b) => {
+    setBancaFilter((prev) => {
+      const next = new Set(prev);
+      next.has(b) ? next.delete(b) : next.add(b);
+      return next;
+    });
   }, []);
 
-  const handleMateria = useCallback((m) => {
-    setMateriaFilter(m);
+  const handleToggleMateria = useCallback((m) => {
+    setMateriaFilter((prev) => {
+      const next = new Set(prev);
+      next.has(m) ? next.delete(m) : next.add(m);
+      return next;
+    });
   }, []);
 
-  const isFinished = remaining.length === 0 && filteredCards.length > 0;
-  const noCards    = filteredCards.length === 0;
-  const filtersOn  = bancaFilter !== 'Todas' || materiaFilter !== 'Todas';
-  const cardIndex  = filteredCards.length - remaining.length;
+  const handleClearFilters = useCallback(() => {
+    setBancaFilter(new Set());
+    setMateriaFilter(new Set());
+    setReviewOnly(false);
+    setReviewSnapshot([]);
+    setReviewSessionDone(new Set());
+  }, []);
+
+  const handleShuffle = useCallback(() => {
+    const next = !shuffled;
+    setShuffled(next);
+    if (next) {
+      setShuffleOrder(shuffleArray(deckBase).map((c) => c.id));
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [shuffled, deckBase]);
+
+  const toggleButtons = useCallback(() => {
+    const next = !buttonsVisible;
+    setButtonsVisible(next);
+    buttonsAnim.value = withSpring(next ? 1 : 0, { damping: 18, stiffness: 160 });
+    Haptics.selectionAsync();
+  }, [buttonsVisible, buttonsAnim]);
+
+  const isFinished = remaining.length === 0 && orderedCards.length > 0;
+  const noCards    = orderedCards.length === 0;
+  const filtersOn  = bancaFilter.size > 0 || materiaFilter.size > 0 || reviewOnly;
+  const cardIndex  = orderedCards.length - remaining.length;
 
   // Tela de carregamento inicial (AsyncStorage)
+  const loadingAnim = useSharedValue(0);
+  useEffect(() => {
+    loadingAnim.value = withRepeat(withTiming(1, { duration: 900 }), -1, true);
+  }, []);
+  const loadingBarStyle = useAnimatedStyle(() => ({
+    width: `${interpolate(loadingAnim.value, [0, 1], [20, 85], Extrapolation.CLAMP)}%`,
+    opacity: interpolate(loadingAnim.value, [0, 0.5, 1], [0.6, 1, 0.6], Extrapolation.CLAMP),
+  }));
+
   if (!loaded) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: C.neon, fontSize: 16, fontWeight: '700', letterSpacing: 1 }}>Carregando...</Text>
+        <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+          <Text style={{ fontSize: 28, fontWeight: '900', letterSpacing: 1.5 }}>
+            <Text style={{ color: C.neon }}>FLASH</Text>
+            <Text style={{ color: C.text }}>CARDS</Text>
+            <Text style={{ color: C.textDim }}> TI</Text>
+          </Text>
+          <Text style={{ color: C.textMuted, fontSize: 12, letterSpacing: 1 }}>Concursos Públicos</Text>
+          <View style={{ marginTop: 24, width: 120, height: 3, backgroundColor: C.surface2, borderRadius: 2, overflow: 'hidden' }}>
+            <Animated.View style={[{ height: '100%', backgroundColor: C.neon, borderRadius: 2 }, loadingBarStyle]} />
+          </View>
         </View>
       </GestureHandlerRootView>
     );
@@ -471,7 +672,7 @@ function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <SafeAreaView style={styles.root}>
 
         {/* ── HEADER ──────────────────────────────────────────────────── */}
@@ -484,11 +685,37 @@ function App() {
             </Text>
             <Text style={styles.headerSub}>Concursos Públicos</Text>
           </View>
-          <TouchableOpacity style={styles.filterIconBtn} onPress={() => setShowFilters(true)}>
-            <Filter color={filtersOn ? C.neon : C.textDim} size={20} />
-            {filtersOn && <View style={styles.filterDot} />}
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            {/* Streak */}
+            {streak >= 3 && (
+              <View style={styles.streakBadge}>
+                <Flame color={C.gold} size={14} />
+                <Text style={styles.streakText}>{streak}</Text>
+              </View>
+            )}
+            {/* Shuffle */}
+            <TouchableOpacity
+              style={[styles.headerIconBtn, shuffled && styles.headerIconBtnActive]}
+              onPress={handleShuffle}
+              activeOpacity={0.7}
+            >
+              <Shuffle color={shuffled ? C.neon : C.textDim} size={18} />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* ── BOTÃO DE FILTRO ────────────────────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.filterBar, filtersOn && styles.filterBarActive]}
+          onPress={() => setShowFilters(true)}
+          activeOpacity={0.75}
+        >
+          <Filter color={filtersOn ? C.neon : C.textDim} size={18} />
+          <Text style={[styles.filterBarTxt, { color: filtersOn ? C.neon : C.textDim }]}>
+            {filtersOn ? 'Filtro ativo — toque para alterar' : 'Filtrar por matéria ou banca'}
+          </Text>
+          {filtersOn && <View style={styles.filterActiveDot} />}
+        </TouchableOpacity>
 
         {/* ── BARRA DE ESTATÍSTICAS ────────────────────────────────────── */}
         <View style={styles.statsBar}>
@@ -504,32 +731,73 @@ function App() {
             <Text style={styles.statLbl}>Total</Text>
           </View>
           <View style={styles.statSep} />
-          <View style={styles.statCell}>
-            <XCircle color={C.red} size={15} />
-            <Text style={[styles.statNum, { color: C.red }]}>{stats.review}</Text>
-            <Text style={styles.statLbl}>Revisar</Text>
-          </View>
+          {/* Botão Só Revisar */}
+          <TouchableOpacity
+            style={[styles.statCell, reviewOnly && styles.statCellActive, !reviewOnly && stats.review === 0 && { opacity: 0.35 }]}
+            onPress={() => {
+              if (!reviewOnly && stats.review === 0) return;
+              if (!reviewOnly) {
+                const ids = filteredCards
+                  .filter((c) => progress[c.id] === 'review')
+                  .map((c) => c.id);
+                setReviewSnapshot(ids);
+                setReviewSessionDone(new Set());
+                setReviewOnly(true);
+              } else {
+                setReviewOnly(false);
+                setReviewSnapshot([]);
+                setReviewSessionDone(new Set());
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <XCircle color={reviewOnly ? C.red : C.textDim} size={15} />
+            <Text style={[styles.statNum, { color: reviewOnly ? C.red : C.textDim }]}>{stats.review}</Text>
+            <Text style={[styles.statLbl, reviewOnly && { color: C.red }]}>Revisar</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* ── BARRA DE PROGRESSO DO DECK ────────────────────────────── */}
-        <DeckProgressBar total={filteredCards.length} remaining={remaining.length} />
+        {/* ── BARRA DE PROGRESSO DO DECK (long press = reiniciar) ───── */}
+        <TouchableOpacity
+          activeOpacity={1}
+          delayLongPress={700}
+          onLongPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            handleResetConfirm();
+          }}
+        >
+          <DeckProgressBar total={orderedCards.length} remaining={remaining.length} fontScale={layout.fontScale} />
+        </TouchableOpacity>
 
-        {/* ── FILTROS ATIVOS (pills) ───────────────────────────────────── */}
+        {/* ── FILTROS ATIVOS (pills) — tappable para editar filtro ──────── */}
         {filtersOn && (
           <View style={styles.activePills}>
-            {bancaFilter !== 'Todas' && (
-              <View style={styles.pill}><Text style={styles.pillText}>{bancaFilter}</Text></View>
+            {reviewOnly && (
+              <TouchableOpacity style={[styles.pill, styles.pillRed]} onPress={() => { setReviewOnly(false); setReviewSnapshot([]); setReviewSessionDone(new Set()); }}>
+                <Text style={[styles.pillText, styles.pillTextRed]}>Só Revisar  ✕</Text>
+              </TouchableOpacity>
             )}
-            {materiaFilter !== 'Todas' && (
-              <View style={styles.pill}><Text style={styles.pillText}>{materiaFilter}</Text></View>
-            )}
+            {[...bancaFilter].map((b) => (
+              <TouchableOpacity key={b} style={styles.pill} onPress={() => handleToggleBanca(b)}>
+                <Text style={styles.pillText}>{b}  ✕</Text>
+              </TouchableOpacity>
+            ))}
+            {[...materiaFilter].map((m) => (
+              <TouchableOpacity key={m} style={styles.pill} onPress={() => handleToggleMateria(m)}>
+                <Text style={styles.pillText}>{m}  ✕</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         )}
 
         {/* ── ÁREA DOS CARDS ──────────────────────────────────────────── */}
         <View style={styles.deckArea}>
           {noCards ? (
-            <EmptyState message={'Nenhum card\ncom os filtros selecionados.'} onReset={handleReset} />
+            <EmptyState
+              message={'Nenhum card\ncom os filtros selecionados.'}
+              onReset={handleClearFilters}
+              resetLabel="Limpar Filtros"
+            />
           ) : isFinished ? (
             <EmptyState
               message={`Deck concluído! 🎯\n${stats.know} acertos · ${stats.review} para revisar`}
@@ -548,36 +816,22 @@ function App() {
                 onSwipeRight={handleSwipeRight}
                 onSwipeLeft={handleSwipeLeft}
                 index={cardIndex}
-                total={filteredCards.length}
+                total={orderedCards.length}
                 layout={layout}
               />
             </>
           )}
         </View>
 
-        {/* ── BOTÕES DE AÇÃO ───────────────────────────────────────────── */}
+        {/* ── BOTÕES DE AÇÃO (deslizáveis) ─────────────────────────────── */}
         {!isFinished && !noCards && currentCard && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: C.redDim, borderColor: C.redBorder }]}
-              onPress={() => handleSwipeLeft(currentCard.id)}
-            >
-              <XCircle color={C.red} size={26} />
-              <Text style={[styles.actionLbl, { color: C.red }]}>Revisar</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionResetBtn} onPress={handleReset}>
-              <RotateCcw color={C.textDim} size={20} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: C.neonDim, borderColor: C.neonBorder }]}
-              onPress={() => handleSwipeRight(currentCard.id)}
-            >
-              <CheckCircle color={C.neon} size={26} />
-              <Text style={[styles.actionLbl, { color: C.neon }]}>Já Sei</Text>
-            </TouchableOpacity>
-          </View>
+          <ActionBar
+            buttonsAnim={buttonsAnim}
+            buttonsVisible={buttonsVisible}
+            onToggle={toggleButtons}
+            onRevisar={() => handleSwipeLeft(currentCard.id)}
+            onJaSei={() => handleSwipeRight(currentCard.id)}
+          />
         )}
 
       </SafeAreaView>
@@ -586,10 +840,11 @@ function App() {
       <FilterModal
         visible={showFilters}
         onClose={() => setShowFilters(false)}
-        banca={bancaFilter}
-        materia={materiaFilter}
-        onBanca={handleBanca}
-        onMateria={handleMateria}
+        bancas={bancaFilter}
+        materias={materiaFilter}
+        onToggleBanca={handleToggleBanca}
+        onToggleMateria={handleToggleMateria}
+        onClear={handleClearFilters}
       />
     </GestureHandlerRootView>
   );
@@ -614,13 +869,46 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 22, fontWeight: '900', letterSpacing: 1.5 },
   headerSub: { fontSize: 11, color: C.textMuted, letterSpacing: 1, marginTop: 2 },
-  filterIconBtn: {
-    width: 42, height: 42, borderRadius: 12,
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerIconBtn: {
+    width: 36, height: 36, borderRadius: 10,
     backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  filterDot: {
-    position: 'absolute', top: 8, right: 8,
+  headerIconBtnActive: {
+    backgroundColor: C.neonDim, borderColor: C.neonBorder,
+  },
+  streakBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(255,215,0,0.12)', borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.35)', borderRadius: 10,
+    paddingHorizontal: 8, paddingVertical: 5,
+  },
+  streakText: { fontSize: 13, fontWeight: '800', color: C.gold },
+  filterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: C.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: C.border,
+    gap: 10,
+  },
+  filterBarActive: {
+    borderColor: C.neonBorder,
+    backgroundColor: C.neonDim,
+  },
+  filterBarTxt: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  filterActiveDot: {
     width: 8, height: 8, borderRadius: 4, backgroundColor: C.neon,
   },
 
@@ -639,6 +927,9 @@ const styles = StyleSheet.create({
   statCell: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 5,
+  },
+  statCellActive: {
+    backgroundColor: 'rgba(255,68,68,0.10)', borderRadius: 10, marginVertical: 2,
   },
   statNum: { fontSize: 15, fontWeight: '700' },
   statLbl: { fontSize: 12, color: C.textMuted },
@@ -697,7 +988,9 @@ const styles = StyleSheet.create({
     backgroundColor: C.neonDim, borderWidth: 1, borderColor: C.neonBorder,
     borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
   },
+  pillRed: { backgroundColor: C.redDim, borderColor: C.redBorder },
   pillText: { fontSize: 11, color: C.neon, fontWeight: '700' },
+  pillTextRed: { color: C.red },
 
   // ── DECK AREA ─────────────────────────────────────────────────────────────
   deckArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -782,21 +1075,55 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 4,
+    gap: 10,
+  },
+  actionBtnSecondary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 18,
-    gap: 16,
+    paddingVertical: 17,
+    borderRadius: 100,
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,68,68,0.5)',
+    backgroundColor: 'rgba(255,68,68,0.08)',
   },
-  actionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 14, borderRadius: 16, gap: 8, borderWidth: 1.5,
+  actionBtnPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 17,
+    borderRadius: 100,
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,255,65,0.5)',
+    backgroundColor: 'rgba(0,255,65,0.12)',
   },
-  actionLbl: { fontSize: 14, fontWeight: '700', letterSpacing: 0.4 },
-  actionResetBtn: {
-    width: 46, height: 46, borderRadius: 23,
-    backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
-    alignItems: 'center', justifyContent: 'center',
+  actionLbl: { fontSize: 15, fontWeight: '700', letterSpacing: 0.2 },
+
+  // ActionBar wrapper — paddingBottom aplicado dinamicamente via useSafeAreaInsets
+  actionBarWrap: {
+    paddingBottom: 0,
+  },
+  actionHandle: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    gap: 5,
+  },
+  actionHandlePill: {
+    width: 44, height: 4, borderRadius: 2,
+    backgroundColor: C.textMuted,
+  },
+  actionHandleHint: {
+    fontSize: 10, color: C.textMuted,
+    letterSpacing: 0.4,
+    textTransform: 'lowercase',
   },
 
   // ── EMPTY STATE ───────────────────────────────────────────────────────────
@@ -828,7 +1155,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginBottom: 24,
   },
-  modalTitle: { fontSize: 19, fontWeight: '800', color: C.text },
+  modalTitle: { fontSize: 19, fontWeight: '800', color: C.text, flex: 1 },
+  modalClearBtn: { paddingHorizontal: 10, paddingVertical: 6, marginRight: 6 },
+  modalClearText: { fontSize: 13, color: C.textDim, fontWeight: '600' },
   modalCloseBtn: {
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center',
@@ -852,4 +1181,12 @@ const styles = StyleSheet.create({
   applyBtnText: { fontSize: 15, fontWeight: '800', color: C.bg, letterSpacing: 0.5 },
 });
 
-registerRootComponent(App);
+function Root() {
+  return (
+    <SafeAreaProvider>
+      <App />
+    </SafeAreaProvider>
+  );
+}
+
+registerRootComponent(Root);
