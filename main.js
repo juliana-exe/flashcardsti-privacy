@@ -17,6 +17,7 @@ import {
   ScrollView,
   useWindowDimensions,
   Alert,
+  AppState,
 } from 'react-native';
 
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -395,7 +396,7 @@ function EmptyState({ message, onReset, resetLabel = 'Reiniciar Deck' }) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  COMPONENTE: ActionBar — botões que somem/aparecem
 // ─────────────────────────────────────────────────────────────────────────────
-function ActionBar({ buttonsAnim, buttonsVisible, onToggle, onRevisar, onJaSei }) {
+function ActionBar({ buttonsAnim, buttonsVisible, onToggle, onRevisar, onJaSei, navBarHeight = 0 }) {
   const insets = useSafeAreaInsets();
   const slideStyle = useAnimatedStyle(() => ({
     opacity: buttonsAnim.value,
@@ -403,8 +404,10 @@ function ActionBar({ buttonsAnim, buttonsVisible, onToggle, onRevisar, onJaSei }
     overflow: 'hidden',
   }));
 
+  const bottomPad = Math.max(insets.bottom, navBarHeight, 16);
+
   return (
-    <View style={[styles.actionBarWrap, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+    <View style={[styles.actionBarWrap, { paddingBottom: bottomPad }]}>
       {/* Handle: sempre visível, toggle ao tocar */}
       <TouchableOpacity style={styles.actionHandle} onPress={onToggle} activeOpacity={0.6}>
         <View style={styles.actionHandlePill} />
@@ -462,10 +465,24 @@ function App() {
   const [progress,       setProgress]      = useState({});
   const [loaded,         setLoaded]        = useState(false);
 
+  const [navBarHeight, setNavBarHeight] = useState(0);
+
   // ── Modo imersivo: esconde barra de navegação do Android ──────────────────
   useEffect(() => {
-    NavigationBar.setVisibilityAsync('hidden');
-    NavigationBar.setBehaviorAsync('overlay-swipe');
+    const hideNavBar = async () => {
+      try {
+        const h = await NavigationBar.getHeightAsync();
+        setNavBarHeight(h ?? 0);
+        await NavigationBar.setVisibilityAsync('hidden');
+        await NavigationBar.setBehaviorAsync('overlay-swipe');
+      } catch (_) {}
+    };
+    hideNavBar();
+    // Re-esconde quando o app volta ao foreground (swipe acidental reexibe a nav bar)
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') hideNavBar();
+    });
+    return () => sub.remove();
   }, []);
 
   // ── Carrega progresso e filtros salvos ao abrir o app ───────────────────
@@ -831,6 +848,7 @@ function App() {
             onToggle={toggleButtons}
             onRevisar={() => handleSwipeLeft(currentCard.id)}
             onJaSei={() => handleSwipeRight(currentCard.id)}
+            navBarHeight={navBarHeight}
           />
         )}
 
