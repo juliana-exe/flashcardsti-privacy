@@ -248,17 +248,17 @@ function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total, layout }) {
 
           {/* Conteúdo central com scroll para textos longos */}
           <View style={styles.cardCenter}>
-            <View style={[styles.iconCircle, { backgroundColor: C.purpleDim }]}>
-              <Brain color={C.purpleLight} size={30} strokeWidth={1.5} />
+            <View style={[styles.iconCircleSmall, { backgroundColor: C.purpleDim }]}>
+              <Brain color={C.purpleLight} size={20} strokeWidth={1.5} />
             </View>
-            <Text style={[styles.cardFaceLabel, { color: C.purpleLight }]}>DEFINIÇÃO</Text>
+            <Text style={[styles.cardFaceLabel, { color: C.purpleLight, marginBottom: 8 }]}>DEFINIÇÃO</Text>
             <ScrollView
-              style={{ width: '100%' }}
+              style={{ width: '100%', flexGrow: 0 }}
               contentContainerStyle={{ paddingHorizontal: 4, paddingBottom: 4 }}
               showsVerticalScrollIndicator={false}
               bounces={false}
             >
-              <Text style={[styles.cardBodyText, { fontSize: Math.round(14 * fontScale), lineHeight: Math.round(22 * fontScale) }]}>{card.verso}</Text>
+              <Text style={[styles.cardBodyText, { fontSize: Math.round(13 * fontScale), lineHeight: Math.round(20 * fontScale) }]}>{card.verso}</Text>
             </ScrollView>
           </View>
 
@@ -1050,11 +1050,15 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
 
   cardCenter: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12,
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8,
   },
   iconCircle: {
     width: 62, height: 62, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center', marginBottom: 18,
+  },
+  iconCircleSmall: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
   },
   cardFaceLabel: {
     fontSize: 10, fontWeight: '800', color: C.neon,
