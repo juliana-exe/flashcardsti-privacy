@@ -89,7 +89,7 @@ export default [
 
   { id:'redes_022', banca:'FCC', materia:'Redes de Computadores', dificuldade:'Médio',
     frente:'VPN — Virtual Private Network',
-    verso:'Cria túnel criptografado sobre rede pública (Internet), garantindo confidencialidade e integridade. Protocolos comuns: IPSec (L3, mais usado em redes corporativas), SSL/TLS (L4-7, baseado em web, ex.: OpenVPN), L2TP (geralmente combinado com IPSec). Modos: túnel (host-to-site) e transporte (site-to-site).' },
+    verso:'Cria túnel criptografado sobre rede pública (Internet), garantindo confidencialidade e integridade. Protocolos comuns: IPSec (L3, mais usado em redes corporativas), SSL/TLS (L4-7, baseado em web, ex.: OpenVPN), L2TP (geralmente combinado com IPSec). Modos IPSec: túnel (gateway a gateway — site-to-site, encapsula pacote IP inteiro) e transporte (host a host, protege apenas o payload).' },
 
   { id:'redes_023', banca:'Cebraspe', materia:'Redes de Computadores', dificuldade:'Difícil',
     frente:'IPSec — Modos e Protocolos',
@@ -402,4 +402,45 @@ export default [
   { id:'redes_100', banca:'FCC', materia:'Redes de Computadores', dificuldade:'Difícil',
     frente:'Redes 5G — Arquitetura e Características',
     verso:'Latência ultra-baixa (~1ms), velocidades até 20 Gbps, suporte a até 1 milhão de dispositivos/km². Faixas: sub-6 GHz (cobertura ampla) e mmWave (30-300 GHz, alta velocidade, curto alcance). Arquitetura baseada em Network Slicing (múltiplas redes virtuais sobre mesma infraestrutura), MEC (Mobile Edge Computing) e SDN/NFV.' },
+
+  // ── Questões de Concurso ──────────────────────────────────────────────────
+  { id:'redes_101', banca:'Cebraspe', materia:'Redes de Computadores', dificuldade:'Difícil',
+    frente:'IPv6 — NDP (Neighbor Discovery Protocol)',
+    verso:'Substitui o ARP do IPv4 no IPv6. Usa mensagens ICMPv6:\n• Neighbor Solicitation (NS) / Neighbor Advertisement (NA): equivalentes ao ARP request/reply.\n• Router Solicitation (RS) / Router Advertisement (RA): descoberta de roteadores e prefixos (base do SLAAC).\n• Redirect: informa host sobre roteador melhor.\nCobrado em TCU, STJ, AGU: "No IPv6, o ARP é substituído pelo NDP."' },
+
+  { id:'redes_102', banca:'FGV', materia:'Redes de Computadores', dificuldade:'Médio',
+    frente:'IPv6 SLAAC — Autoconfiguração Stateless',
+    verso:'Stateless Address Autoconfiguration (RFC 4862): host gera automaticamente seu IPv6 sem servidor DHCP. Processo: gera endereço link-local (FE80::/10 + EUI-64 do MAC), envia RS ao roteador, recebe RA com prefixo /64, monta endereço global (prefixo + EUI-64). DAD (Duplicate Address Detection) verifica unicidade via NS.' },
+
+  { id:'redes_103', banca:'FCC', materia:'Redes de Computadores', dificuldade:'Difícil',
+    frente:'NetFlow e IPFIX — Monitoramento de Fluxo',
+    verso:'NetFlow (Cisco): exporta estatísticas de fluxos IP (src/dst IP, porta, protocolo, bytes, pacotes) para um coletor. Versão 9 é a base do IPFIX (RFC 7011), padrão aberto IETF. JFlow (Juniper), sFlow (padrão aberto, amostragem de pacotes) são alternativas. Essencial para análise de tráfego, detecção de anomalias e capacity planning.' },
+
+  { id:'redes_104', banca:'Cebraspe', materia:'Redes de Computadores', dificuldade:'Médio',
+    frente:'SD-WAN — Software-Defined WAN',
+    verso:'Aplica os princípios do SDN às WANs corporativas. Desacopla o plano de controle do hardware, permitindo gerenciamento centralizado de múltiplos links (MPLS, Internet, LTE). Benefícios: seleção dinâmica de caminho com base em QoS, failover automático, redução de custos (substitui MPLS caro por Internet broadband). Cobrado em bancas recentes (CESPE 2022-2024).' },
+
+  { id:'redes_105', banca:'FGV', materia:'Redes de Computadores', dificuldade:'Difícil',
+    frente:'OSPF vs. EIGRP vs. BGP — Quando Usar',
+    verso:'OSPF: IGP link-state, redes mistas/abertas, área backbone (area 0) obrigatória. Padrão em concursos para roteamento interno.\nEIGRP: IGP vetor-distância avançado, Cisco proprietário, convergência rápida, métrica composta (BW + delay).\nBGP: EGP, entre sistemas autônomos (AS), TCP 179, políticas de roteamento, Internet. "BGP é o protocolo de roteamento da Internet."' },
+
+  { id:'redes_106', banca:'FCC', materia:'Redes de Computadores', dificuldade:'Médio',
+    frente:'IEEE 802.1Q — VLAN Tagging',
+    verso:'Padrão que insere tag de 4 bytes no quadro Ethernet entre o campo Source MAC e EtherType:\n• TPID (2 bytes): 0x8100 identifica quadro 802.1Q\n• TCI: Priority Code Point-3bits (CoS/QoS), Drop Eligible-1bit, VLAN ID-12bits\nVLAN ID 12 bits → 4094 VLANs válidas (0 e 4095 reservadas). Trunk links carregam múltiplas VLANs tagged; access links recebem/enviam frames sem tag.' },
+
+  { id:'redes_107', banca:'Cebraspe', materia:'Redes de Computadores', dificuldade:'Difícil',
+    frente:'Anycast — Roteamento para o Mais Próximo',
+    verso:'Um endereço IP anunciado por múltiplos servidores em locais geográficos diferentes. O roteamento BGP encaminha requisições para o servidor "mais próximo" (menor métrica). Usado em: DNS raiz (servidores .com em dezenas de locais com mesmo IP), CDNs (Cloudflare usa anycast globalmente), mitigação DDoS (absorve tráfego globalmente). Nativo no IPv6 (endereços anycast são unicast reutilizados).' },
+
+  { id:'redes_108', banca:'FGV', materia:'Redes de Computadores', dificuldade:'Médio',
+    frente:'GRE Tunnel — Casos de Uso',
+    verso:'Generic Routing Encapsulation (RFC 2784) encapsula qualquer protocolo dentro de IP. Protocolo 47. Usos comuns: VPNs site-to-site (GRE+IPSec), tunelamento IPv6 sobre IPv4 (6in4), transporte de protocolos non-IP (ex: transportar OSPF multicast sobre links que não suportam multicast). DMVPN (Dynamic Multipoint VPN) usa GRE em modo hub-and-spoke dinâmico.' },
+
+  { id:'redes_109', banca:'FCC', materia:'Redes de Computadores', dificuldade:'Médio',
+    frente:'Cabeçalho IPv4 — Campos Principais',
+    verso:'Tamanho mínimo: 20 bytes. Campos: Version (4b), IHL (4b), DSCP/ECN (8b), Total Length (16b), Identification (16b), Flags/Fragment Offset (16b), TTL (8b), Protocol (8b — 6=TCP, 17=UDP, 1=ICMP, 50=ESP, 51=AH), Header Checksum (16b), Src/Dst IP (32b cada).\nTTL decrementado a cada roteador; quando chega a 0, pacote descartado e ICMP Time Exceeded enviado.' },
+
+  { id:'redes_110', banca:'Cebraspe', materia:'Redes de Computadores', dificuldade:'Difícil',
+    frente:'DNSSEC — Cadeia de Confiança',
+    verso:'Assina digitalmente registros DNS. Cadeia de confiança: IANA (Root) → TLD (.br, .com) → zona autoritativa. Registros: RRSIG (assinatura de um RRset), DNSKEY (chave pública da zona — ZSK e KSK), DS (hash da KSK na zona pai — chain of trust), NSEC/NSEC3 (prova de não-existência de domínio). Não criptografa, apenas garante autenticidade e integridade.' },
 ];

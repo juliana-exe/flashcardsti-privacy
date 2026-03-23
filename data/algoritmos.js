@@ -6,7 +6,7 @@ export default [
   // ── Complexidade ──────────────────────────────────────────────────────────
   { id:'alg_001', banca:'Cebraspe', materia:'Algoritmos e Estruturas de Dados', dificuldade:'Médio',
     frente:'Notação Big-O — Definição',
-    verso:'Descreve o comportamento assintótico do algoritmo no pior caso, em relação ao tamanho da entrada n. Hierarquia (do mais ao menos eficiente):\nO(1) < O(log n) < O(√n) < O(n) < O(n log n) < O(n²) < O(n³) < O(2ⁿ) < O(n!)\nIgnora constantes e termos de menor ordem. Big-Ω: melhor caso. Big-Θ: caso médio = pior (limite apertado).' },
+    verso:'Descreve o comportamento assintótico do algoritmo no pior caso, em relação ao tamanho da entrada n. Hierarquia (do mais ao menos eficiente):\nO(1) < O(log n) < O(√n) < O(n) < O(n log n) < O(n²) < O(n³) < O(2ⁿ) < O(n!)\nIgnora constantes e termos de menor ordem. Big-Ω: limite inferior (melhor caso). Big-Θ: limite apertado — cresce exatamente como f(n) tanto por cima quanto por baixo (ex.: Merge Sort é Θ(n log n) em todos os casos).' },
 
   { id:'alg_002', banca:'FCC', materia:'Algoritmos e Estruturas de Dados', dificuldade:'Médio',
     frente:'Complexidade dos Principais Algoritmos de Busca',
@@ -63,7 +63,7 @@ export default [
     frente:'Árvore AVL — Balanceamento',
     verso:'BST auto-balanceada: o fator de balanceamento (altura subárvore esq − dir) deve estar em {-1, 0, 1}. Rotações para rebalancear após inserção/remoção: LL (rotação simples direita), RR (esquerda), LR (dupla esq-dir), RL (dir-esq). Busca/Inserção/Remoção garantidas O(log n). Mais estritamente balanceada que Rubro-Negra.' },
 
-  { id:'alg_015', banca:'FGV', materia:'Algoritmos de Estruturas de Dados', dificuldade:'Médio',
+  { id:'alg_015', banca:'FGV', materia:'Algoritmos e Estruturas de Dados', dificuldade:'Médio',
     frente:'Árvore Rubro-Negra (Red-Black Tree)',
     verso:'BST balanceada com propriedades de coloração: raiz preta, nós externos (NIL) pretos, nó vermelho só tem filhos pretos, todo caminho raiz-folha tem mesmo número de nós pretos (black-height). Garantia: h ≤ 2 log(n+1). Menos balanceada que AVL mas inserção/remoção mais rápidas. Usada em TreeMap (Java), std::map (C++), Linux scheduler.' },
 
@@ -104,7 +104,7 @@ export default [
     frente:'Árvore Geradora Mínima — Kruskal e Prim',
     verso:'Kruskal: ordena arestas por peso crescente; adiciona aresta se não cria ciclo (Union-Find). O(E log E). Eficiente para grafos esparsos.\nPrim: cresce a árvore a partir de um vértice; sempre adiciona a aresta mais barata que conecta a MST a um novo vértice. O(E log V) com heap.\nAmbos encontram a MST de um grafo conectado e ponderado.' },
 
-  { id:'alg_025', banca:'FCC', materia:'Algoritmos e Estruturas de Dados', dificuldade:'Méidio',
+  { id:'alg_025', banca:'FCC', materia:'Algoritmos e Estruturas de Dados', dificuldade:'Médio',
     frente:'Union-Find (Disjoint Set Union)',
     verso:'Estrutura para gerenciar conjuntos disjuntos. Operações: find(x) — raiz do conjunto de x; union(x, y) — une os conjuntos.\nOtimizações: Union by rank (árvore menor sob maior) + Path compression (aplana caminho no find).\nComplexidade amortizada: quase O(1) por operação — O(α(n)), onde α é a função inversa de Ackermann.' },
 
@@ -334,4 +334,86 @@ export default [
   { id:'alg_080', banca:'IBFC', materia:'Algoritmos e Estruturas de Dados', dificuldade:'Fácil',
     frente:'Recursão — Torres de Hanói',
     verso:'Mover n discos do pino A para C usando B auxiliar. Regras: só mover 1 disco por vez; disco maior nunca sobre menor.\nSolução recursiva: mover n-1 discos de A para B, mover disco n de A para C, mover n-1 de B para C.\nNúmero mínimo de movimentos: 2^n - 1. O(2^n).\nDemonstra elegância da recursão; problema com estrutura recursiva natural.' },
+
+  // ── Questões de Concurso ──────────────────────────────────────────────────
+  {
+    id: 'alg_081',
+    banca: 'Cebraspe',
+    materia: 'Algoritmos e Estruturas de Dados',
+    dificuldade: 'Difícil',
+    frente: 'Rabin-Karp — Busca de Padrão em String',
+    verso: 'Algoritmo de busca de substring usando hashing rolante. Calcula hash do padrão P e de cada janela de tamanho |P| no texto T. Se os hashes batem, verifica caractere a caractere (evita falsos positivos).\nHash rolante: remove char saindo, adiciona char entrando em O(1). Complexidade: O(n + m) caso médio, O(nm) pior caso (muitas colisões). Ideal para busca de múltiplos padrões simultaneamente (Aho-Corasick para conjunto fixo).',
+  },
+  {
+    id: 'alg_082',
+    banca: 'FGV',
+    materia: 'Algoritmos e Estruturas de Dados',
+    dificuldade: 'Difícil',
+    frente: 'Segment Tree — Consultas em Intervalos',
+    verso: 'Árvore binária onde cada nó armazena o resultado de uma operação sobre um intervalo do array (soma, mínimo, máximo, GCD). Construção: O(n). Query e Update pontuais: O(log n). Lazy propagation: adiar atualizações em intervalo, atualiza só quando necessário — Range Update + Range Query em O(log n).\nUsada em consultas de soma/mínimo em subarrays com atualizações frequentes. Alternativa: Fenwick Tree (BIT) para casos restritos.',
+  },
+  {
+    id: 'alg_083',
+    banca: 'FCC',
+    materia: 'Algoritmos e Estruturas de Dados',
+    dificuldade: 'Difícil',
+    frente: 'Algoritmo de Dijkstra vs Bellman-Ford',
+    verso: 'Dijkstra: menor caminho em grafos com pesos não-negativos. Greedy com priority queue (min-heap). O((V + E) log V). Não funciona com arestas negativas.\nBellman-Ford: funciona com pesos negativos. Relaxa todas as arestas V-1 vezes. O(VE). Detecta ciclos negativos (se ainda há relaxamento na V-ésima iteração → ciclo negativo).\nFloyd-Warshall: todos os pares de caminhos mínimos, O(V³). A*: Dijkstra com heurística admissível para busca orientada a destino.',
+  },
+  {
+    id: 'alg_084',
+    banca: 'Cebraspe',
+    materia: 'Algoritmos e Estruturas de Dados',
+    dificuldade: 'Médio',
+    frente: 'Problema da Mochila (Knapsack)',
+    verso: '0/1 Knapsack: cada item pode ser incluído ou não. Recorrência DP: dp[i][w] = max(dp[i-1][w], dp[i-1][w-p[i]] + v[i]). O(nW).\nFractional Knapsack: itens divisíveis → solução Greedy por valor/peso. O(n log n).\nUnbounded Knapsack: cada item pode ser usado quantas vezes. dp[w] = max(dp[w], dp[w-p[i]] + v[i]).\nMeet-in-the-middle: para n~40 itens, divide em 2 metades — O(2^(n/2)).',
+  },
+  {
+    id: 'alg_085',
+    banca: 'FGV',
+    materia: 'Algoritmos e Estruturas de Dados',
+    dificuldade: 'Difícil',
+    frente: 'Algoritmos de Ordenação — Estabilidade',
+    verso: 'Estável: preserva ordem relativa de elementos com chave igual.\nEstáveis: Merge Sort, Insertion Sort, Bubble Sort, Tim Sort (Python/Java padrão), Counting Sort, Radix Sort.\nInstáveis: Quick Sort (partição padrão), Heap Sort, Shell Sort, Selection Sort.\nTim Sort (Python): híbrido adaptativo Merge Sort + Insertion Sort. O(n log n) pior caso, O(n) para dados quase ordenados. Usado no Java Arrays.sort() para objetos e Python sorted().',
+  },
+  {
+    id: 'alg_086',
+    banca: 'FCC',
+    materia: 'Algoritmos e Estruturas de Dados',
+    dificuldade: 'Médio',
+    frente: 'Contagem de Inversões em Array',
+    verso: 'Par (i, j) é inversão se i < j e A[i] > A[j]. Número de inversões mede quão "desordenado" está o array (0 = ordenado, n(n-1)/2 = inversamente ordenado).\nAlgoritmo eficiente: Merge Sort modificado — ao fundir, conta elementos do lado esquerdo maiores que os da direita. O(n log n), O(n) espaço.\nAplicações: ranking de similaridade entre listas (coeficiente de Kendall τ), análise de algoritmos de ordenação por inversões (Insertion Sort: O(n + inversões)).',
+  },
+  {
+    id: 'alg_087',
+    banca: 'Cebraspe',
+    materia: 'Algoritmos e Estruturas de Dados',
+    dificuldade: 'Médio',
+    frente: 'Trie (Árvore de Prefixos)',
+    verso: 'Árvore multiway onde cada nó representa um caractere. Strings compartilham prefixos comuns. Nó folha (ou flag isEnd) marca término de palavra.\nOperações: insert, search, startsWith — todas O(m), onde m = tamanho da string, independente do número de strings.\nVantagem sobre HashMap: suporte a busca por prefixo, autocompletar, ordenação lexicográfica. Desvantagem: uso de memória alto.\nVariante: Compressed Trie (Patricia Tree) compacta caminhos únicos.',
+  },
+  {
+    id: 'alg_088',
+    banca: 'FGV',
+    materia: 'Algoritmos e Estruturas de Dados',
+    dificuldade: 'Difícil',
+    frente: 'Algoritmo de Floyd para Detecção de Ciclo',
+    verso: 'Floyd\'s Cycle Detection ("tortoise and hare"): dois ponteiros percorrem a lista — lento (1 passo) e rápido (2 passos). Se houver ciclo, se encontram.\nFase 1 — Detecção: rápido alcança lento dentro do ciclo.\nFase 2 — Localização: reinicia um ponteiro no início, ambos avançam 1 passo; encontram-se exatamente no início do ciclo.\nComplexidade: O(n) tempo, O(1) espaço. Aplicação: encontrar ciclo em linked lists, detectar duplicata em array de n+1 inteiros em [1,n].',
+  },
+  {
+    id: 'alg_089',
+    banca: 'FCC',
+    materia: 'Algoritmos e Estruturas de Dados',
+    dificuldade: 'Médio',
+    frente: 'Longest Common Subsequence (LCS)',
+    verso: 'LCS: maior subsequência comum a duas strings X e Y (elementos não precisam ser contíguos). Recorrência DP:\n• Se X[i] == Y[j]: dp[i][j] = dp[i-1][j-1] + 1\n• Senão: dp[i][j] = max(dp[i-1][j], dp[i][j-1])\nComplexidade: O(mn) tempo e espaço. Otimização espaço: O(min(m,n)).\nLCS vs LIS: LIS (Longest Increasing Subsequence) em um array — O(n log n) com binary search (algoritmo de Patience Sorting).',
+  },
+  {
+    id: 'alg_090',
+    banca: 'IBFC',
+    materia: 'Algoritmos e Estruturas de Dados',
+    dificuldade: 'Médio',
+    frente: 'Union-Find (Disjoint Set Union)',
+    verso: 'Estrutura de dados para gerenciar partições de conjuntos disjuntos. Operações: find(x) — retorna representante do conjunto de x; union(x, y) — une conjuntos de x e y.\nOtimizações: Path Compression (find achatado) + Union by Rank/Size. Com ambas: operações em O(α(n)) amortizado — praticamente O(1) (função inversa de Ackermann).\nAplicações: algoritmo de Kruskal (MST), detecção de ciclos em grafos não-dirigidos, componentes conectados, percolation.',
+  },
 ];

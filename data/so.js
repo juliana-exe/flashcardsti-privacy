@@ -410,4 +410,45 @@ export default [
   { id:'so_100', banca:'IBFC', materia:'Sistemas Operacionais', dificuldade:'Médio',
     frente:'GPT vs. MBR — Tabelas de Partição',
     verso:'MBR (Master Boot Record): limite de 4 partições primárias (ou 3+1 estendida), volumes até 2 TB. Código de boot nos primeiros 512 bytes.\nGPT (GUID Partition Table): parte do padrão UEFI. Até 128 partições, volumes até 9,4 ZB, CRC32 para integridade, backup da tabela no final do disco. Requesito para Windows 11 + Secure Boot.' },
+
+  // ── Questões de Concurso ──────────────────────────────────────────────────
+  { id:'so_101', banca:'Cebraspe', materia:'Sistemas Operacionais', dificuldade:'Difícil',
+    frente:'eBPF — Extended Berkeley Packet Filter',
+    verso:'Tecnologia do kernel Linux que permite executar programas sandboxed no espaço do kernel sem módulos de kernel. O verificador (verifier) garante segurança e terminação. Casos de uso: tracing/observabilidade (Cilium, bpftrace), networking (XDP — bypass do stack TCP/IP, ~100ns latência), segurança (Falco, Tetragon — políticas em runtime). "Linux superpower" moderno.' },
+
+  { id:'so_102', banca:'FGV', materia:'Sistemas Operacionais', dificuldade:'Médio',
+    frente:'Linux — Capabilities',
+    verso:'Dividem os privilégios root em unidades menores. Em vez de dar root completo, processo recebe apenas as capabilities necessárias.\nExemplos: CAP_NET_BIND_SERVICE (bind em porta < 1024), CAP_SYS_ADMIN (operações administrativas), CAP_NET_RAW (raw sockets), CAP_SYS_PTRACE (depuração).\nImportante para containers (Docker/Kubernetes limitam capabilities por padrão). Princípio do menor privilégio no SO.' },
+
+  { id:'so_103', banca:'FCC', materia:'Sistemas Operacionais', dificuldade:'Difícil',
+    frente:'NUMA — Non-Uniform Memory Access',
+    verso:'Arquitetura onde o tempo de acesso à memória varia dependendo de qual processador (node) solicita qual memória. Memória local (no mesmo node) é mais rápida que remota (cross-node via interconexão). Linux expõe via numactl. Aplicações NUMA-aware alocam memória no mesmo node da CPU que vai usá-la (memory affinity). Crítico para performance em servidores multi-socket.' },
+
+  { id:'so_104', banca:'Cebraspe', materia:'Sistemas Operacionais', dificuldade:'Médio',
+    frente:'Systemd — Unit Files e Targets',
+    verso:'Unidade básica: arquivo .service, .timer, .socket, .mount, .target.\nSeções de um .service: [Unit] (descrição, dependências After=/Requires=), [Service] (Type=, ExecStart=, Restart=, User=), [Install] (WantedBy=multi-user.target).\nComandos: systemctl start/stop/restart/enabled/disable/status.\nJournald: log unificado; journalctl -u serviço -f.\nCobrado: "systemctl mask" diferente de "disable" (mask bloqueia ativação).' },
+
+  { id:'so_105', banca:'FCC', materia:'Sistemas Operacionais', dificuldade:'Médio',
+    frente:'Escalonamento CFS — Completely Fair Scheduler',
+    verso:'Escalonador padrão do Linux desde o kernel 2.6.23. Não usa timeslices fixos: cada processo tem um "virtual runtime" (vruntime). O processo com menor vruntime é escolhido (runqueue implementada como BST/red-black tree). Garante justiça proporcional ao peso (nice value). Grupos de controle (cgroups) permitem limitar CPU por grupo de processos.' },
+
+  { id:'so_106', banca:'FGV', materia:'Sistemas Operacionais', dificuldade:'Difícil',
+    frente:'Copy-on-Write (COW) em fork()',
+    verso:'Após fork(), pai e filho compartilham as mesmas páginas físicas mapeadas como somente-leitura. Quando qualquer um tenta escrever em uma página, o kernel copia a página apenas para o processo que escreveu (page fault → cópia). Resultado: fork() é O(1) em vez de O(n) — copia apenas o que foi modificado. Usado em shells, Redis (RDB snapshot), PostgreSQL (MVCC).' },
+
+  { id:'so_107', banca:'IBFC', materia:'Sistemas Operacionais', dificuldade:'Médio',
+    frente:'Huge Pages (Páginas Gigantes)',
+    verso:'Páginas de memória maiores que o padrão (4 KB): 2 MB (huge pages) ou 1 GB (gigantic pages) no x86-64. Reduzem TLB misses em workloads com grande consumo de memória (bancos de dados, ML). Dois tipos no Linux: transparent huge pages (THP — automático) e HugeTLBfs (alocação explícita, mais previsível). JVM, Oracle DB e PostgreSQL se beneficiam de huge pages.' },
+
+  { id:'so_108', banca:'FCC', materia:'Sistemas Operacionais', dificuldade:'Médio',
+    frente:'Comandos Linux — Diagnóstico de Performance',
+    verso:'vmstat: CPU, memória, I/O e swap em intervalos.\niostat: utilização de discos e dispositivos de bloco.\nsar (sysstat): coleta histórica de CPU, memória, rede, I/O.\nfree -h: uso de memória e swap.\nlsof: lista arquivos abertos por processos.\nstrace: rastreia syscalls de um processo.\nperf: profiling de CPU com eventos de hardware (ciclos, cache misses).\nulimit: limites de recursos por processo (arquivos, memória, CPU).' },
+
+  { id:'so_109', banca:'Cebraspe', materia:'Sistemas Operacionais', dificuldade:'Difícil',
+    frente:'Segurança no Linux — AppArmor e SELinux',
+    verso:'Mecanismos de MAC (Mandatory Access Control) no Linux:\n• SELinux (Security-Enhanced Linux — NSA): usado no RHEL/CentOS/Fedora. Labels em todos os objetos. Política complexa mas granular. Modos: enforcing, permissive, disabled.\n• AppArmor: Ubuntu/Debian. Perfis por programa (pathname-based), mais simples. Modos: enforce, complain.\nAmbos implementam o modelo MAC na camada LSM (Linux Security Module) do kernel.' },
+
+  { id:'so_110', banca:'FGV', materia:'Sistemas Operacionais', dificuldade:'Médio',
+    frente:'Kubernetes — Conceitos Fundamentais',
+    verso:'Orquestrador de containers. Componentes:\n• Pod: menor unidade deployável, um ou mais containers com IP e storage compartilhados.\n• Node: máquina (física ou VM) que executa Pods.\n• Control Plane: API Server, etcd (estado do cluster), Scheduler, Controller Manager.\n• Service: abstração de rede que expõe um conjunto de Pods (ClusterIP, NodePort, LoadBalancer).\n• Namespace: isolamento lógico de recursos.\nProbe de saúde: liveness e readiness.' },
 ];

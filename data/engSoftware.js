@@ -76,7 +76,7 @@ export default [
 
   { id:'es_018', banca:'Cebraspe', materia:'Engenharia de Software', dificuldade:'Médio',
     frente:'Princípio de Substituição de Liskov (LSP)',
-    verso:'Se S é subtipo de T, objetos de T podem ser substituídos por objetos de S sem alterar a correção do programa. Violação clássica: Quadrado herda Retângulo mas quebra o invariante (setar largura não deve alterar altura). Subclasses devem fortalecer pré-condições somente suavizando e pós-condições somente fortalecendo.' },
+    verso:'Se S é subtipo de T, objetos de T podem ser substituídos por objetos de S sem alterar a correção do programa. Violação clássica: Quadrado herda Retângulo mas quebra o invariante (setar largura não deve alterar altura). Regras: pré-condições só podem ser SUAVIZADAS na subclasse (exigir menos); pós-condições só podem ser FORTALECIDAS (garantir pelo menos o que a classe base garantia).' },
 
   // ── TDD e Qualidade ───────────────────────────────────────────────────────
   { id:'es_019', banca:'FGV', materia:'Engenharia de Software', dificuldade:'Médio',
@@ -415,4 +415,45 @@ export default [
   { id:'es_100', banca:'IBFC', materia:'Engenharia de Software', dificuldade:'Médio',
     frente:'Twelve-Factor App',
     verso:'Metodologia para construir SaaS moderno (Heroku). Fatores principais:\n1. Codebase: 1 repo, múltiplos deploys\n2. Dependencies: declaradas explicitamente\n3. Config: armazenada em variáveis de ambiente\n4. Backing Services: banco, fila como recursos externos\n5. Build/Release/Run: estágios separados\n6. Processos stateless\n12. Logs como streams de eventos' },
+
+  // ── Questões de Concurso ──────────────────────────────────────────────────
+  { id:'es_101', banca:'Cebraspe', materia:'Engenharia de Software', dificuldade:'Médio',
+    frente:'SRE — Site Reliability Engineering',
+    verso:'Disciplina do Google que aplica práticas de engenharia de software à operação de sistemas. Conceitos:\n• SLI (Service Level Indicator): métrica que mede o comportamento (ex.: latência p99).\n• SLO (Service Level Objective): meta para o SLI (ex.: 99,9% de requisições < 200ms).\n• SLA: compromisso contratual com penalidades.\n• Error Budget: margem de indisponibilidade permitida (100% - SLO). Quando esgota, novos lançamentos pausam.\nToil: trabalho manual, repetitivo — SRE reduz toil com automação.' },
+
+  { id:'es_102', banca:'FGV', materia:'Engenharia de Software', dificuldade:'Médio',
+    frente:'GitOps — Infraestrutura Declarativa',
+    verso:'Paradigma onde o estado desejado da infraestrutura e aplicações é declarado em repositório Git. Um agente (ex.: ArgoCD, Flux) monitora o repo e aplica automaticamente as mudanças ao cluster. Operações de infraestrutura feitas via pull request (revisão, auditoria, rollback via git revert).\nBenefícios: compliance via código, rollback auditável, infraestrutura como código viva.' },
+
+  { id:'es_103', banca:'FCC', materia:'Engenharia de Software', dificuldade:'Médio',
+    frente:'Feature Flags (Feature Toggles)',
+    verso:'Mecanismo para controlar a visibilidade de funcionalidades em produção sem necessidade de novo deploy. Tipos:\n• Release toggle: esconde feature incompleta em trunk-based dev.\n• Experiment toggle: A/B testing.\n• Ops toggle: kill switch para feature problemática.\n• Permission toggle: libera por usuário/grupo.\nHabilita: deploys sem downtime, canary releases, dark launches, rollback instantâneo sem revert de código.' },
+
+  { id:'es_104', banca:'Cebraspe', materia:'Engenharia de Software', dificuldade:'Difícil',
+    frente:'Chaos Engineering',
+    verso:'Prática de intencionalmente introduzir falhas em sistemas em produção para descobrir fraquezas antes que causem incidentes. "Break things on purpose to learn how to fix them." Origem no Netflix (Chaos Monkey — encerra instâncias aleatoriamente; Chaos Kong — derruba uma AZ inteira).\nPrincípios: hipótese sobre estado estável, eventos do mundo real, minimizar blast radius, execução em produção. Ferramentas: Chaos Mesh, Gremlin, AWS Fault Injection Simulator.' },
+
+  { id:'es_105', banca:'FGV', materia:'Engenharia de Software', dificuldade:'Médio',
+    frente:'Padrão CQRS — Command Query Responsibility Segregation',
+    verso:'Separa as operações de leitura (Query) das de escrita (Command) em modelos/armazenamentos distintos. Escritas atualizam o modelo de escrita; leituras consultam o modelo de leitura (eventualmente consistente). Benefícios: escalabilidade independente para leitura e escrita, otimização de cada modelo. Frequentemente combinado com Event Sourcing. Aumenta complexidade: usar apenas quando necessário.' },
+
+  { id:'es_106', banca:'IBFC', materia:'Engenharia de Software', dificuldade:'Médio',
+    frente:'Trunk-Based Development — Pré-requisitos',
+    verso:'Todos os desenvolvedores integram no trunk/main frequentemente (pelo menos diariamente). Pré-requisitos para funcionar:\n• Feature flags para funcionalidades incompletas.\n• Cobertura de testes alta (não quebrar o trunk).\n• Pipeline CI/CD rápido (feedback em minutos).\n• Code review assíncrono leve ou pair programming.\nContraponto ao Git Flow (long-lived branches). Padrão em empresas de alta performance (Google, Meta).' },
+
+  { id:'es_107', banca:'FCC', materia:'Engenharia de Software', dificuldade:'Difícil',
+    frente:'Padrão Saga — Transações Distribuídas',
+    verso:'Padrão para gerenciar transações longas em microsserviços sem 2-phase commit distribuído. Uma saga é uma sequência de transações locais; cada transação publica evento e, em caso de falha, executa transação compensatória para desfazer.\nTipos:\n• Choreography: cada serviço reage a eventos dos outros (desacoplado, difícil de rastrear).\n• Orchestration: orquestrador central coordena (mais fácil de monitorar).\nDesafio: transações compensatórias idempotentes.' },
+
+  { id:'es_108', banca:'Cebraspe', materia:'Engenharia de Software', dificuldade:'Médio',
+    frente:'API Gateway — Função e Padrões',
+    verso:'Ponto de entrada único para um conjunto de microsserviços. Responsabilidades: roteamento de requests, autenticação/autorização (JWT, OAuth), rate limiting, SSL termination, logging, circuit breaker, transformação de payload.\nPatterns: Backend for Frontend (BFF — API gateway específico para cada frontend Web/Mobile). Exemplos: AWS API Gateway, Kong, nginx, Traefik, Apigee.' },
+
+  { id:'es_109', banca:'FGV', materia:'Engenharia de Software', dificuldade:'Médio',
+    frente:'Padrão Circuit Breaker',
+    verso:'Previne chamadas em cascata a serviços degradados. Estados:\n• Closed (normal): requisições fluem normalmente. Conta falhas.\n• Open (falha): requisições rejeitadas imediatamente, sem chamar o serviço. Tempo de espera configurável.\n• Half-Open (testando): uma requisição de teste; se passar, volta a Closed; se falhar, volta a Open.\nImplementações: Netflix Hystrix (deprecated), Resilience4j, spring-retry. Essencial em arquiteturas de microsserviços.' },
+
+  { id:'es_110', banca:'IBFC', materia:'Engenharia de Software', dificuldade:'Fácil',
+    frente:'Testes de Contrato (Contract Testing)',
+    verso:'Verifica que a comunicação entre serviços (consumidor e produtor) está de acordo com um contrato pré-definido. Tipos:\n• Consumer-Driven Contract Testing: consumidor define o contrato; produtor verifica que o atende. Ferramenta: Pact.\nBenefício: permite evoluir APIs independentemente, sem testes de integração E2E completos para cada mudança. Essencial em arquiteturas de microsserviços para evitar breaking changes.' },
 ];

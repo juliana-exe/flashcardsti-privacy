@@ -14,6 +14,7 @@ import bancoDados   from './bancoDados';
 import so           from './so';
 import engSoftware  from './engSoftware';
 import linguagens   from './linguagens';
+import algoritmos   from './algoritmos';
 
 export const CARDS = [
   ...redes,
@@ -22,6 +23,7 @@ export const CARDS = [
   ...so,
   ...engSoftware,
   ...linguagens,
+  ...algoritmos,
 ];
 
 // Filtros gerados automaticamente a partir dos dados — nunca edite manualmente
