@@ -23,7 +23,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "com.dev.flashcardsti",
-      "versionCode": 12,
+      "versionCode": 13,
       "permissions": [],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
