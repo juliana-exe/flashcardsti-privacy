@@ -28,6 +28,7 @@ import Animated, {
   withSpring,
   withTiming,
   withRepeat,
+  cancelAnimation,
   interpolate,
   runOnJS,
   Extrapolation,
@@ -65,14 +66,18 @@ function useLayout() {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const cardW = width - 48;
-  // Desconta insets reais do dispositivo + chrome: header(60) + filterBar(56) + stats(56) + progress(60) + actionBar(110) + margem(40)
+  // Desconta insets reais do dispositivo + chrome: header(60) + filterBar(56) + stats(56) + progress(72) + actionBar(110) + margem(46)
   const safeHeight = height - insets.top - insets.bottom;
-  const maxCardH = safeHeight - 382;
+  const maxCardH = safeHeight - 400;
   const cardH = Math.min(cardW * 1.55, safeHeight * 0.52, maxCardH);
   const swipeThreshold = width * 0.28;
   // Escala tipográfica: base 375 px (iPhone padrão). Clamp entre 0.82 e 1.12.
   const fontScale = Math.min(Math.max(width / 375, 0.82), 1.12);
-  return { width, height, cardW, cardH, swipeThreshold, fontScale };
+  // Memoiza para referência estável — evita re-renders desnecessários em FlashCard
+  return useMemo(
+    () => ({ width, height, cardW, cardH, swipeThreshold, fontScale }),
+    [width, height, cardW, cardH, swipeThreshold, fontScale],
+  );
 }
 
 const C = {
@@ -105,7 +110,7 @@ const DIFF_COLOR = { 'Fácil': C.neon, 'Médio': C.gold, 'Difícil': C.red };
 // ─────────────────────────────────────────────────────────────────────────────
 //  COMPONENTE: FlashCard (flip + swipe)
 // ─────────────────────────────────────────────────────────────────────────────
-function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total, layout }) {
+const FlashCard = React.memo(function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total, layout }) {
   const { width: SW, cardW: CARD_W, cardH: CARD_H, swipeThreshold: SWIPE_THRESHOLD, fontScale } = layout;
   const tx   = useSharedValue(0);
   const ty   = useSharedValue(0);
@@ -253,6 +258,7 @@ function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total, layout }) {
             </View>
             <Text style={[styles.cardFaceLabel, { color: C.purpleLight, marginBottom: 8 }]}>DEFINIÇÃO</Text>
             <ScrollView
+              nestedScrollEnabled={true}
               style={{ width: '100%', flexGrow: 0 }}
               contentContainerStyle={{ paddingHorizontal: 4, paddingBottom: 4 }}
               showsVerticalScrollIndicator={false}
@@ -272,16 +278,17 @@ function FlashCard({ card, onSwipeRight, onSwipeLeft, index, total, layout }) {
       </Animated.View>
     </GestureDetector>
   );
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  COMPONENTE: Modal de Filtros
 // ─────────────────────────────────────────────────────────────────────────────
 function FilterModal({ visible, onClose, bancas, materias, onToggleBanca, onToggleMateria, onClear }) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalSheet}>
+        <View style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom + 12, 20) }]}>
 
           {/* Cabeçalho */}
           <View style={styles.modalHeader}>
@@ -458,7 +465,7 @@ function App() {
   const [shuffled,       setShuffled]      = useState(false);
   const [shuffleOrder,   setShuffleOrder]  = useState([]);
   const [reviewSnapshot,    setReviewSnapshot]    = useState([]);
-  const [reviewSessionDone, setReviewSessionDone] = useState(new Set());
+  const [reviewQueue,       setReviewQueue]       = useState([]); // fila rotativa do modo Só Revisar
   const [streak,            setStreak]            = useState(0);
   const buttonsAnim = useSharedValue(1);
   // progress: { [cardId]: 'know' | 'review' }
@@ -466,6 +473,7 @@ function App() {
   const [loaded,         setLoaded]        = useState(false);
 
   const [navBarHeight, setNavBarHeight] = useState(0);
+  const [deckAreaHeight, setDeckAreaHeight] = useState(null);
 
   // ── Modo imersivo: esconde barra de navegação do Android ──────────────────
   useEffect(() => {
@@ -539,20 +547,27 @@ function App() {
   // Ordem embaralhada — recalculada quando deckBase muda ou shuffle ativa
   const orderedCards = useMemo(() => {
     if (!shuffled) return deckBase;
-    if (shuffleOrder.length === deckBase.length &&
-        shuffleOrder.every((id) => deckBase.some((c) => c.id === id))) {
-      return shuffleOrder.map((id) => deckBase.find((c) => c.id === id)).filter(Boolean);
+    // Usa Map para lookup O(1) — evita O(n²) com find/some
+    const deckMap = new Map(deckBase.map((c) => [c.id, c]));
+    const isValid =
+      shuffleOrder.length === deckBase.length &&
+      shuffleOrder.every((id) => deckMap.has(id));
+    if (isValid) {
+      return shuffleOrder.map((id) => deckMap.get(id)).filter(Boolean);
     }
     return deckBase;
   }, [shuffled, shuffleOrder, deckBase]);
 
-  // Cards ainda não avaliados — no modo Só Revisar, mostra os marcados como 'review' e ainda não vistos nesta sessão
-  const remaining = useMemo(() =>
-    reviewOnly
-      ? orderedCards.filter((c) => progress[c.id] === 'review' && !reviewSessionDone.has(c.id))
-      : orderedCards.filter((c) => !progress[c.id]),
-    [orderedCards, progress, reviewOnly, reviewSessionDone]
-  );
+  // Cards ainda não avaliados
+  // Modo normal: cards sem progresso
+  // Modo Só Revisar: fila rotativa — "Revisar" manda pro final, "Já Sei" remove
+  const remaining = useMemo(() => {
+    if (reviewOnly) {
+      const cardMap = new Map(filteredCards.map((c) => [c.id, c]));
+      return reviewQueue.map((id) => cardMap.get(id)).filter(Boolean);
+    }
+    return orderedCards.filter((c) => !progress[c.id]);
+  }, [reviewOnly, reviewQueue, filteredCards, orderedCards, progress]);
 
   // Stats derivadas do progresso salvo (apenas cards do filtro atual)
   const stats = useMemo(() => {
@@ -574,14 +589,20 @@ function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setProgress((prev) => ({ ...prev, [id]: 'know' }));
     setStreak((s) => s + 1);
-  }, []);
+    if (reviewOnly) {
+      // Remove da fila — sessão avança, card não volta mais nesta sessão
+      setReviewQueue((prev) => prev.slice(1));
+    }
+  }, [reviewOnly]);
 
   const handleSwipeLeft = useCallback((id) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setProgress((prev) => ({ ...prev, [id]: 'review' }));
     setStreak(0);
     if (reviewOnly) {
-      setReviewSessionDone((prev) => { const n = new Set(prev); n.add(id); return n; });
+      // Rotaciona a fila: card atual vai pro final → reaparece após ver os demais
+      setReviewQueue((prev) => prev.length > 1 ? [...prev.slice(1), prev[0]] : prev);
+    } else {
+      setProgress((prev) => ({ ...prev, [id]: 'review' }));
     }
   }, [reviewOnly]);
 
@@ -596,7 +617,7 @@ function App() {
     if (reviewOnly) {
       setReviewOnly(false);
       setReviewSnapshot([]);
-      setReviewSessionDone(new Set());
+      setReviewQueue([]);
     }
   }, [filteredCards, reviewOnly]);
 
@@ -635,7 +656,7 @@ function App() {
     setMateriaFilter(new Set());
     setReviewOnly(false);
     setReviewSnapshot([]);
-    setReviewSessionDone(new Set());
+    setReviewQueue([]);
   }, []);
 
   const handleShuffle = useCallback(() => {
@@ -643,9 +664,23 @@ function App() {
     setShuffled(next);
     if (next) {
       setShuffleOrder(shuffleArray(deckBase).map((c) => c.id));
+    } else {
+      setShuffleOrder([]);
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, [shuffled, deckBase]);
+
+  // Re-embaralha automaticamente quando deckBase muda (filtros/reviewOnly) e shuffle está ativo
+  useEffect(() => {
+    if (!shuffled || deckBase.length === 0) return;
+    const deckMap = new Map(deckBase.map((c) => [c.id, c]));
+    const stale =
+      shuffleOrder.length !== deckBase.length ||
+      !shuffleOrder.every((id) => deckMap.has(id));
+    if (stale) {
+      setShuffleOrder(shuffleArray(deckBase).map((c) => c.id));
+    }
+  }, [shuffled, deckBase, shuffleOrder]);
 
   const toggleButtons = useCallback(() => {
     const next = !buttonsVisible;
@@ -659,11 +694,26 @@ function App() {
   const filtersOn  = bancaFilter.size > 0 || materiaFilter.size > 0 || reviewOnly;
   const cardIndex  = orderedCards.length - remaining.length;
 
+  // Limita altura do card ao espaço real disponível (evita overlap com barra de progresso)
+  const effectiveCardH = deckAreaHeight != null && deckAreaHeight > 80
+    ? Math.min(layout.cardH, deckAreaHeight - 20)
+    : layout.cardH;
+
+  // Memoiza o layout com cardH efetivo — referência estável para React.memo do FlashCard
+  const effectiveLayout = useMemo(
+    () => ({ ...layout, cardH: effectiveCardH }),
+    [layout, effectiveCardH],
+  );
+
   // Tela de carregamento inicial (AsyncStorage)
   const loadingAnim = useSharedValue(0);
   useEffect(() => {
     loadingAnim.value = withRepeat(withTiming(1, { duration: 900 }), -1, true);
   }, []);
+  // Para a animação de loading assim que os dados estão prontos
+  useEffect(() => {
+    if (loaded) cancelAnimation(loadingAnim);
+  }, [loaded]);
   const loadingBarStyle = useAnimatedStyle(() => ({
     width: `${interpolate(loadingAnim.value, [0, 1], [20, 85], Extrapolation.CLAMP)}%`,
     opacity: interpolate(loadingAnim.value, [0, 0.5, 1], [0.6, 1, 0.6], Extrapolation.CLAMP),
@@ -758,12 +808,12 @@ function App() {
                   .filter((c) => progress[c.id] === 'review')
                   .map((c) => c.id);
                 setReviewSnapshot(ids);
-                setReviewSessionDone(new Set());
+                setReviewQueue([...ids]);
                 setReviewOnly(true);
               } else {
                 setReviewOnly(false);
                 setReviewSnapshot([]);
-                setReviewSessionDone(new Set());
+                setReviewQueue([]);
               }
             }}
             activeOpacity={0.7}
@@ -790,7 +840,7 @@ function App() {
         {filtersOn && (
           <View style={styles.activePills}>
             {reviewOnly && (
-              <TouchableOpacity style={[styles.pill, styles.pillRed]} onPress={() => { setReviewOnly(false); setReviewSnapshot([]); setReviewSessionDone(new Set()); }}>
+              <TouchableOpacity style={[styles.pill, styles.pillRed]} onPress={() => { setReviewOnly(false); setReviewSnapshot([]); setReviewQueue([]); }}>
                 <Text style={[styles.pillText, styles.pillTextRed]}>Só Revisar  ✕</Text>
               </TouchableOpacity>
             )}
@@ -808,7 +858,7 @@ function App() {
         )}
 
         {/* ── ÁREA DOS CARDS ──────────────────────────────────────────── */}
-        <View style={styles.deckArea}>
+        <View style={styles.deckArea} onLayout={(e) => setDeckAreaHeight(e.nativeEvent.layout.height)}>
           {noCards ? (
             <EmptyState
               message={'Nenhum card\ncom os filtros selecionados.'}
@@ -824,7 +874,7 @@ function App() {
             <>
               {/* Card do fundo (próximo) */}
               {nextCard && (
-                <View style={[styles.shadowCard, { width: layout.cardW, height: layout.cardH }]} pointerEvents="none" />
+                <View style={[styles.shadowCard, { width: layout.cardW, height: effectiveCardH }]} pointerEvents="none" />
               )}
               {/* Card ativo */}
               <FlashCard
@@ -834,7 +884,7 @@ function App() {
                 onSwipeLeft={handleSwipeLeft}
                 index={cardIndex}
                 total={orderedCards.length}
-                layout={layout}
+                layout={effectiveLayout}
               />
             </>
           )}
@@ -1169,7 +1219,6 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
     borderTopLeftRadius: 26, borderTopRightRadius: 26,
     padding: 24,
-    paddingBottom: Platform.OS === 'ios' ? 42 : 28,
     borderTopWidth: 1, borderColor: C.border,
     maxHeight: '85%',
   },
